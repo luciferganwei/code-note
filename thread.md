@@ -16,7 +16,16 @@
 ## 2 interrupt中断理解
 ### 2.1 interrupt方法
 代码片段
-`thread.interrupt()` 该方法表示给thread发一个中断信号，注意理解中断，中断的意思就是阻止当前线程的执行状态，状态有可能是在执行中,有可能是处于wait中,例如线程如果调用了wait,sleep,join，这个时候中断表示使线程从wait状态中醒来。当这个interrupt方法被调用,会将flag置为ture,jdk会扫描该flag,如果发现变量为ture,则响应中断,如果线程之前是wait状态的时候，那么响应中断就是抛出interruptException异常,同时将falg设置为false.如下：
+`thread.interrupt()` 该方法表示给thread发一个中断信号，注意理解中断，中断的意思就是阻止当前线程的执行状态，状态有可能是在执行中,有可能是处于wait中,例如线程如果调用了wait,sleep,join，这个时候中断表示使线程从wait状态中醒来。当这个interrupt方法被调用,会将flag置为ture.jdk会扫描该flag,如果发现变量为ture,则响应中断。（调用interrupt并不意味着立即停止目标线程正在进行的工作，只是传递了请求中断的消息，然后由线程在下一个合适的时刻中断自己，这些时刻称为取消点。wait，sleep，join 严格处理这种请求，当它们收到中断请求或者开始执行时发现中断状态，将抛出一个异常。取消点如何选定？
+参考文献: http://www.cnblogs.com/lijunamneg/archive/2013/01/25/2877211.html ,linux系统线程的实现
+
+(1)通过pthread_testcancel调用以编程方式建立线程取消点。 
+(2)线程等待pthread_cond_wait或pthread_cond_timewait()中的特定条件。 
+(3)被sigwait(2)阻塞的函数 
+(4)一些标准的库调用。通常，这些调用包括线程可基于阻塞的函数。根据POSIX标准，pthread_join()、pthread_testcancel()、pthread_cond_wait()、pthread_cond_timedwait()、sem_wait()、sigwait()等函数以及read()、write()等会引起阻塞的系统调用都是Cancelation-point，而其他pthread函数都不会引起Cancelation动作。
+）
+
+如果线程之前是wait状态的时候，那么响应中断就是抛出interruptException异常,同时将falg设置为false.如下：
 try{
    object.wait() //被中断后会抛出InterruptException异常
 }catch(InterruptException){
