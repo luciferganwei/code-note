@@ -16,11 +16,22 @@
 ## 2 interrupt中断理解
 ### 2.1 interrupt方法
 代码片段
-`thread.interrupt()` 该方法表示给thread发一个中断信号，注意理解中断，中断的意思就是阻止当前线程的执行状态，状态有可能是在执行中,有可能是处于wait中,例如线程如果调用了wait,sleep,join，这个时候中断表示使线程从wait状态中醒来。当这个interrupt方法被调用,会将flag置为ture,jdk会扫描该flag,如果发现变量为ture,则响应中断,如果线程之前是wait状态的时候，那么响应中断就是抛出interruptException异常,同时将falg设置为false.如下：
+`thread.interrupt()` 该方法表示给thread发一个中断信号，注意理解中断，中断的意思就是阻止当前线程的执行状态，状态有可能是在执行中,有可能是处于wait中,例如线程如果调用了wait,sleep,join，这个时候中断表示使线程从wait状态中醒来。当这个interrupt方法被调用,会将flag置为ture.jdk会扫描该flag,如果发现变量为ture,则响应中断。（调用interrupt并不意味着立即停止目标线程正在进行的工作，只是传递了请求中断的消息，然后由线程在下一个合适的时刻中断自己，这些时刻称为取消点。wait，sleep，join 严格处理这种请求，当它们收到中断请求或者开始执行时发现中断状态，将抛出一个异常。取消点如何选定？
+参考文献: http://www.cnblogs.com/lijunamneg/archive/2013/01/25/2877211.html ,linux系统线程的实现
+
+(1)通过pthread_testcancel调用以编程方式建立线程取消点。   
+(2)线程等待pthread_cond_wait或pthread_cond_timewait()中的特定条件。 
+(3)  被sigwait(2)阻塞的函数   
+(4)一些标准的库调用。通常，这些调用包括线程可基于阻塞的函数。根据POSIX标准，pthread_join()、pthread_testcancel()、pthread_cond_wait()、pthread_cond_timedwait()、sem_wait()、sigwait()等函数以及read()、write()等会引起阻塞的系统调用都是Cancelation-point，而其他pthread函数都不会引起Cancelation动作。
+）
+
+如果线程之前是wait状态的时候，那么响应中断就是抛出interruptException异常,同时将falg设置为false.如下：
+```
 try{
    object.wait() //被中断后会抛出InterruptException异常
 }catch(InterruptException){
 }
+```
 注意调用interrupt只是将flag设置为ture,至于什么时候响应中断那这个是jvm的响应了。jvm响应了是通过抛出异常以及复位中断标记。即throw InterruptException，以及flag=false 操作
   
 ### 2.2 thread.isInterrupted()
@@ -103,7 +114,7 @@ public static void main(String[] args) {
 `Thread.interrupted()`这个方法为检查中断状态，并复位。什么意思呢?
 即线程被中断了，第一次调用Thread.interrupted()；方法会将flag设置为true,第二次调用马上又会设置成false.
 
-可以看到，java的中断机制只是发送一个信号，最后怎么处理还是看线程自己。有的人可能会说了，这么简单为什么我们不自己在应用层面实现呢?比如给一个全局变量，然后线程去检测这个变量，是可以这样做的，但是这个变量需要我们自己去维护，既然jvm层面已经帮我们实现了为啥不去用呢？
+可以看到，java的中断机制只是发送一个信号，最后怎么处理还是看线程自己。有的人可能会说了，这么简单为什么我们不自己在应用层面实现呢?比如给一个全局变量，然后线程去检测这个变量，普通情况下是可以这样做的。特别地，就是如果一个线程在阻塞状态时和等待状态时，它应该如何发现这个标记变量的变化。wait方法声明为native，则证明这部分是涉及操作系统上面的线程机制，即使没有显示地判断中断标记位，这些方法仍然能够抛出interrupt exception。既然jvm层面已经帮我们实现了为啥不去用呢？
 
 
 ## 3 join理解
